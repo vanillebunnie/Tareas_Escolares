@@ -1,10 +1,6 @@
 const pool = require('../config/db');
 
-/**
- * ==============================
- * CREAR TAREA
- * ==============================
- */
+/** ============================== CREAR TAREA ============================== */
 exports.crearTarea = async (req, res) => {
   const { titulo, descripcion, fecha_entrega, id_materia } = req.body;
   const id_usuario = req.usuario.id_usuario;
@@ -42,11 +38,7 @@ exports.crearTarea = async (req, res) => {
 };
 
 
-/**
- * ==============================
- * LISTAR TODAS LAS TAREAS
- * ==============================
- */
+/** ============================== LISTAR TODAS LAS TAREAS ============================== */
 exports.obtenerTodasLasTareas = async (req, res) => {
   const id_usuario = req.usuario.id_usuario;
 
@@ -69,11 +61,7 @@ exports.obtenerTodasLasTareas = async (req, res) => {
 };
 
 
-/**
- * ==============================
- * MARCAR COMO COMPLETADA
- * ==============================
- */
+/** ============================== MARCAR COMO COMPLETADA ============================== */
 exports.marcarComoCompletada = async (req, res) => {
   const { id } = req.params;
   const id_usuario = req.usuario.id_usuario;
@@ -102,11 +90,7 @@ exports.marcarComoCompletada = async (req, res) => {
   }
 };
 
-/**
- * ==============================
- * OBTENER TAREA POR ID
- * ==============================
- */
+/** ============================== OBTENER TAREA POR ID ============================== */
 exports.obtenerTareaPorId = async (req, res) => {
   const { id } = req.params;
   const id_usuario = req.usuario.id_usuario;
@@ -133,11 +117,7 @@ exports.obtenerTareaPorId = async (req, res) => {
   }
 };
 
-/**
- * ==============================
- * ACTUALIZAR TAREA
- * ==============================
- */
+/** ============================== ACTUALIZAR TAREA ============================== */
 exports.actualizarTarea = async (req, res) => {
   const { id } = req.params;
   const { titulo, descripcion, fecha_entrega } = req.body;
@@ -169,11 +149,7 @@ exports.actualizarTarea = async (req, res) => {
   }
 };
 
-/**
- * ==============================
- * ELIMINAR TAREA
- * ==============================
- */
+/** ============================== ELIMINAR TAREA ============================== */
 exports.eliminarTarea = async (req, res) => {
   const { id } = req.params;
   const id_usuario = req.usuario.id_usuario;
@@ -201,12 +177,7 @@ exports.eliminarTarea = async (req, res) => {
   }
 };
 
-/**
- * ==============================
- * CONSULTAS ESPECIALES
- *  => TAREAS PENDIENTES
- * ==============================
- */
+/** ============================== CONSULTAS ESPECIALES  => TAREAS PENDIENTES ============================== */
  exports.tareasPendientes = async (req, res) => {
   const id_usuario = req.usuario.id_usuario;
 
@@ -225,12 +196,7 @@ exports.eliminarTarea = async (req, res) => {
   res.json(result.rows);
 };
 
-/**
- * ==============================
- * CONSULTAS ESPECIALES
- *  => TAREAS VENCIDAS
- * ==============================
- */
+/** ============================== CONSULTAS ESPECIALES  => TAREAS VENCIDAS ============================== */
  exports.tareasVencidas = async (req, res) => {
   const id_usuario = req.usuario.id_usuario;
 
