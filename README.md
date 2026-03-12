@@ -72,6 +72,6 @@ A continuación se presenta la lista detallada de los endpoints creados en la AP
 
 ---
 
-**Desarrolladora:** Victoria Piña Poot ໒꒰ྀི´  ˘  `  ꒱ྀིა
-**Universidad Politécnica de Bacalar**
+**Desarrolladora:** Victoria Piña Poot ໒꒰ྀི´  ˘  `  ꒱ྀིა  
+**Universidad Politécnica de Bacalar**   
 **Fecha:** 12 de marzo de 2026
