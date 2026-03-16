@@ -1,0 +1,102 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Montserrat", sans-serif;
+  
+  --color-fondo-lateral: var(--fondo-lateral);
+  --color-fondo-principal: var(--fondo-principal);
+  --color-texto-fuerte: var(--texto-fuerte);
+  --color-texto-suave: var(--texto-suave);
+  --color-boton-activo: var(--boton-activo);
+  --color-boton-hover: var(--boton-hover);
+}
+
+/* Tema azul (Por defecto) */
+:root, [data-theme="neutro"] {
+  --fondo-lateral: #a0add3;
+  --fondo-principal: #f9faff;
+  --texto-fuerte: #1a182c;
+  --texto-suave: #0b1e30;
+  --boton-activo: #ffffff;
+  --boton-hover: #ffffff;
+}
+
+/* Tema Rosa */
+[data-theme="rosa"] {
+  --fondo-lateral: #f6c9d5;
+  --fondo-principal: #fffafe;
+  --texto-fuerte: #4a2c20;
+  --texto-suave: #5d3324;
+  --boton-activo: #ffffff;
+  --boton-hover: #e4a7b7;
+}
+
+/* Tema Amarillo */
+[data-theme="amarillo"] {
+  --fondo-lateral: #fff2a7;
+  --fondo-principal: #fffff7;
+  --texto-fuerte: #4f2801;
+  --texto-suave: #573307;
+  --boton-activo: #ffffff;
+  --boton-hover: #fce168;
+}
+
+/* Tema Azul */
+[data-theme="azul"] {
+  --fondo-lateral: #c0dcef;
+  --fondo-principal: #f7fcfa;
+  --texto-fuerte: #1c3b40;
+  --texto-suave: #324649;
+  --boton-activo: #ffffff;
+  --boton-hover: #97cdde;
+}
+
+/* Tema Verde */
+[data-theme="verde"] {
+  --fondo-lateral: #b1dda8;
+  --fondo-principal: #f9fcf8;
+  --texto-fuerte: #154010;
+  --texto-suave: #32472f;
+  --boton-activo: #ffffff;
+  --boton-hover: #7eac78;
+}
+
+/* Tema Lila */
+[data-theme="lila"] {
+  --fondo-lateral: #c9a4db;
+  --fondo-principal: #faf7fc;
+  --texto-fuerte: #420f64;
+  --texto-suave: #523764;
+  --boton-activo: #ffffff;
+  --boton-hover: #e0cced;
+}
+
+/* Tema Rojo */
+[data-theme="rojo"] {
+  --fondo-lateral: #db7f7f;
+  --fondo-principal: #fcf9f9;
+  --texto-fuerte: #5f0808;
+  --texto-suave: #641414;
+  --boton-activo: #ffffff;
+  --boton-hover: #be6767;
+}
+
+/* Tema Naranja */
+[data-theme="naranja"] {
+  --fondo-lateral: #fabe82;
+  --fondo-principal: #fffcfa;
+  --texto-fuerte: #642f0d;
+  --texto-suave: #5a2e0c;
+  --boton-activo: #ffffff;
+  --boton-hover: #f3a654;
+}
+
+/* Modo oscuro */
+[data-theme="oscuro"] {
+  --fondo-lateral: #312e2e;
+  --fondo-principal: #141313;
+  --texto-fuerte: #f2ede9;
+  --texto-suave: #d8d8d7;
+  --boton-activo: #807e7e;
+  --boton-hover: #292524;
+}

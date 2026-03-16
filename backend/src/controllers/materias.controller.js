@@ -2,54 +2,49 @@ const pool = require('../config/db');
 
 /** ============================== CREAR MATERIA ============================== */
 exports.crearMateria = async (req, res) => {
-  const { nombre, profesor, id_periodo } = req.body;
+  const { nombre, profesor, id_periodo, color } = req.body;
   const id_usuario = req.usuario.id_usuario;
 
   if (!nombre || !id_periodo) {
-    return res.status(400).json({
-      error: 'Nombre e id_periodo son obligatorios'
-    });
+    return res.status(400).json({ error: 'Nombre e id_periodo son obligatorios' });
   }
 
-  try {
+  // Si no se elige color, ponemos uno neutro por defecto
+  const colorMateria = color || '#a0add3';
 
-    //  Validar que el periodo pertenece al usuario
+  try {
     const periodo = await pool.query(
-      `SELECT * FROM periodos
-       WHERE id_periodo = $1 AND id_usuario = $2`,
+      `SELECT * FROM periodos WHERE id_periodo = $1 AND id_usuario = $2`,
       [id_periodo, id_usuario]
     );
 
     if (periodo.rows.length === 0) {
-      return res.status(403).json({
-        error: 'No autorizado para usar este periodo'
-      });
+      return res.status(403).json({ error: 'No autorizado para usar este periodo' });
     }
 
     const result = await pool.query(
-      `INSERT INTO materias (nombre, profesor, id_periodo)
-       VALUES ($1, $2, $3)
+      `INSERT INTO materias (nombre, profesor, id_periodo, color)
+       VALUES ($1, $2, $3, $4)
        RETURNING *`,
-      [nombre, profesor, id_periodo]
+      [nombre, profesor, id_periodo, colorMateria]
     );
 
     res.status(201).json(result.rows[0]);
-
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
 
-/** ============================== LISTAR TODAS LAS MATERIAS DEL USUARIO ============================== */
+/** ============================== LISTAR TODAS LAS MATERIAS ============================== */
 exports.obtenerTodasLasMaterias = async (req, res) => {
   const id_usuario = req.usuario.id_usuario;
 
   try {
-
     const result = await pool.query(
       `SELECT m.id_materia,
               m.nombre,
               m.profesor,
+              m.color,
               p.id_periodo,
               p.nombre AS periodo
        FROM materias m
@@ -60,7 +55,6 @@ exports.obtenerTodasLasMaterias = async (req, res) => {
     );
 
     res.json(result.rows);
-
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -72,34 +66,25 @@ exports.obtenerMateriasPorPeriodo = async (req, res) => {
   const id_usuario = req.usuario.id_usuario;
 
   try {
-
-    // Validar que el periodo pertenece al usuario
     const periodo = await pool.query(
-      `SELECT * FROM periodos
-       WHERE id_periodo = $1 AND id_usuario = $2`,
+      `SELECT * FROM periodos WHERE id_periodo = $1 AND id_usuario = $2`,
       [id_periodo, id_usuario]
     );
 
     if (periodo.rows.length === 0) {
-      return res.status(403).json({
-        error: 'No autorizado'
-      });
+      return res.status(403).json({ error: 'No autorizado' });
     }
 
     const result = await pool.query(
-      `SELECT * FROM materias
-       WHERE id_periodo = $1
-       ORDER BY nombre ASC`,
+      `SELECT * FROM materias WHERE id_periodo = $1 ORDER BY nombre ASC`,
       [id_periodo]
     );
 
     res.json(result.rows);
-
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
-
 
 /** ============================== OBTENER MATERIA POR ID ============================== */
 exports.obtenerMateriaPorId = async (req, res) => {
@@ -107,23 +92,18 @@ exports.obtenerMateriaPorId = async (req, res) => {
   const id_usuario = req.usuario.id_usuario;
 
   try {
-
     const result = await pool.query(
-      `SELECT m.*
-       FROM materias m
+      `SELECT m.* FROM materias m
        JOIN periodos p ON m.id_periodo = p.id_periodo
        WHERE m.id_materia = $1 AND p.id_usuario = $2`,
       [id, id_usuario]
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({
-        error: 'Materia no encontrada'
-      });
+      return res.status(404).json({ error: 'Materia no encontrada' });
     }
 
     res.json(result.rows[0]);
-
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -132,31 +112,30 @@ exports.obtenerMateriaPorId = async (req, res) => {
 /** ============================== ACTUALIZAR MATERIA ============================== */
 exports.actualizarMateria = async (req, res) => {
   const { id } = req.params;
-  const { nombre, profesor } = req.body;
+  const { nombre, profesor, color } = req.body;
   const id_usuario = req.usuario.id_usuario;
 
-  try {
+  const colorMateria = color || '#a0add3';
 
+  try {
     const result = await pool.query(
       `UPDATE materias m
        SET nombre = $1,
-           profesor = $2
+           profesor = $2,
+           color = $3
        FROM periodos p
-       WHERE m.id_materia = $3
+       WHERE m.id_materia = $4
          AND m.id_periodo = p.id_periodo
-         AND p.id_usuario = $4
+         AND p.id_usuario = $5
        RETURNING m.*`,
-      [nombre, profesor, id, id_usuario]
+      [nombre, profesor, colorMateria, id, id_usuario]
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({
-        error: 'Materia no encontrada o no autorizada'
-      });
+      return res.status(404).json({ error: 'Materia no encontrada o no autorizada' });
     }
 
     res.json(result.rows[0]);
-
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -168,7 +147,6 @@ exports.eliminarMateria = async (req, res) => {
   const id_usuario = req.usuario.id_usuario;
 
   try {
-
     const result = await pool.query(
       `DELETE FROM materias m
        USING periodos p
@@ -180,15 +158,10 @@ exports.eliminarMateria = async (req, res) => {
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({
-        error: 'Materia no encontrada o no autorizada'
-      });
+      return res.status(404).json({ error: 'Materia no encontrada o no autorizada' });
     }
 
-    res.json({
-      message: 'Materia eliminada correctamente'
-    });
-
+    res.json({ message: 'Materia eliminada correctamente' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
