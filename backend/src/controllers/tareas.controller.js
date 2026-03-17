@@ -120,22 +120,37 @@ exports.obtenerTareaPorId = async (req, res) => {
 /** ============================== ACTUALIZAR TAREA ============================== */
 exports.actualizarTarea = async (req, res) => {
   const { id } = req.params;
-  const { titulo, descripcion, fecha_entrega } = req.body;
+  const { titulo, descripcion, fecha_entrega, id_materia } = req.body;
   const id_usuario = req.usuario.id_usuario;
 
   try {
+    // Primero, validamos que la NUEVA materia elegida también pertenezca al usuario
+    const materiaValida = await pool.query(
+      `SELECT m.id_materia FROM materias m 
+       JOIN periodos p ON m.id_periodo = p.id_periodo 
+       WHERE m.id_materia = $1 AND p.id_usuario = $2`,
+      [id_materia, id_usuario]
+    );
+
+    if (materiaValida.rows.length === 0) {
+      return res.status(403).json({ error: 'Materia no autorizada' });
+    }
+
+    // Actualizamos la tarea
     const result = await pool.query(
       `UPDATE tareas t
        SET titulo = $1,
            descripcion = $2,
-           fecha_entrega = $3
-       FROM materias m
-       JOIN periodos p ON m.id_periodo = p.id_periodo
-       WHERE t.id_tarea = $4
-         AND t.id_materia = m.id_materia
-         AND p.id_usuario = $5
+           fecha_entrega = $3,
+           id_materia = $4
+       WHERE id_tarea = $5
+         AND EXISTS (
+           SELECT 1 FROM materias m
+           JOIN periodos p ON m.id_periodo = p.id_periodo
+           WHERE m.id_materia = t.id_materia AND p.id_usuario = $6
+         )
        RETURNING t.*`,
-      [titulo, descripcion, fecha_entrega, id, id_usuario]
+      [titulo, descripcion, fecha_entrega, id_materia, id, id_usuario]
     );
 
     if (result.rows.length === 0) {

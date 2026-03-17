@@ -4,8 +4,8 @@ import Dashboard from './pages/Dashboard';
 import Inicio from './pages/Inicio';
 import Configuracion from './pages/Configuracion';
 import Periodos from './pages/Periodos';
-import Materias from './pages/Materias';
 import Horarios from './pages/Horarios';
+import Tareas from './pages/Tareas';
 
 function App() {
   return (
@@ -19,8 +19,8 @@ function App() {
           <Route index element={<Inicio />} />
           <Route path="configuracion" element={<Configuracion />} />
           <Route path="periodos" element={<Periodos />} />
-          <Route path="materias" element={<Materias />} />
           <Route path="horarios" element={<Horarios />} />
+          <Route path="/dashboard/tareas" element={<Tareas />} />
         </Route>
       </Routes>
     </BrowserRouter>
