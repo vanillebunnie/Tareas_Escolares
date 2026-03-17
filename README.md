@@ -19,6 +19,21 @@ Se detallan a continuación las librerías utilizadas como dependencias del sist
 
 ---
 
+## ✿ Configuración del frontend ✿
+
+Para el desarrollo de la interfaz de usuario, se utilizaron las siguientes herramientas modernas:
+
+| Herramienta / Librería | Descripción |
+| :--- | :--- |
+| **Vite** | Entorno de desarrollo rápido y empaquetador para el frontend. |
+| **React** | Biblioteca de JavaScript para construir interfaces de usuario basadas en componentes. |
+| **TypeScript** | Superset de JavaScript que añade tipado estático al proyecto para mayor seguridad en el código. |
+| **Tailwind CSS v4** | Framework de CSS utilitario para estilizar rápidamente los componentes y manejar los temas de colores personalizados. |
+| **Axios** | Cliente HTTP basado en promesas para consumir los endpoints de la API (backend). |
+| **Lucide React** | Paquete de íconos limpios, consistentes y personalizables usados en toda la aplicación. |
+| **React Router Dom** | Librería para manejar la navegación y las rutas entre las diferentes secciones del dashboard. |
+---
+
 ## ✿ Documentación de endpoints ✿
 
 A continuación se presenta la lista detallada de los endpoints creados en la API, organizados por sección.

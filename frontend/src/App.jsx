@@ -6,6 +6,8 @@ import Configuracion from './pages/Configuracion';
 import Periodos from './pages/Periodos';
 import Horarios from './pages/Horarios';
 import Tareas from './pages/Tareas';
+import Calendario from './pages/Calendario';
+import Cuenta from './pages/Cuenta';
 
 function App() {
   return (
@@ -21,6 +23,8 @@ function App() {
           <Route path="periodos" element={<Periodos />} />
           <Route path="horarios" element={<Horarios />} />
           <Route path="/dashboard/tareas" element={<Tareas />} />
+          <Route path="calendario" element={<Calendario />} />
+          <Route path="cuenta" element={<Cuenta />} />
         </Route>
       </Routes>
     </BrowserRouter>
