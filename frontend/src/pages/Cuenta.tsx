@@ -14,14 +14,14 @@ function Cuenta() {
     <div className="max-w-3xl mx-auto pb-12 flex flex-col items-center">
       <h2 className="text-3xl font-semibold text-texto-fuerte mb-8 self-start">Mi cuenta</h2>
       
-      <div className="bg-fondo-principal p-10 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-black/5 flex flex-col items-center text-center w-full">
-        <div className="w-32 h-32 bg-fondo-lateral rounded-full flex items-center justify-center mb-6 shadow-inner border-4 border-fondo-principal">
+      <div className="bg-fondo-tarjeta p-10 rounded-3xl shadow-md flex flex-col items-center text-center w-full transition-colors duration-500">
+        <div className="w-32 h-32 bg-fondo-lateral rounded-full flex items-center justify-center mb-6 shadow-inner border-4 border-fondo-tarjeta">
           <User size={60} className="text-texto-suave" />
         </div>
         
         <h3 className="text-2xl font-bold text-texto-fuerte mb-2">{nombreUsuario}</h3>
         
-        <div className="flex items-center gap-2 text-texto-suave bg-black/5 px-4 py-2 rounded-xl mt-2">
+        <div className="flex items-center gap-2 text-texto-suave bg-fondo-principal px-4 py-2 rounded-xl mt-2 shadow-sm">
           <Mail size={18} />
           <span className="font-medium">{correoUsuario}</span>
         </div>

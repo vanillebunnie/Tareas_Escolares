@@ -2,34 +2,26 @@ import { useState, useEffect } from 'react';
 import { Clock, Edit2, Trash2, X } from 'lucide-react';
 import api from '../services/api';
 
-// ================= CONTRATOS DE SEGURIDAD =================
-interface Periodo {
-  id_periodo: number;
-  nombre: string;
-}
+interface Periodo { id_periodo: number; nombre: string; }
+interface Materia { id_materia: number; nombre: string; profesor: string; id_periodo: number; color: string; }
+interface Horario { id_horario: number; dia_semana: string; hora_inicio: string; hora_fin: string; id_materia: number; }
 
-interface Materia {
-  id_materia: number;
-  nombre: string;
-  profesor: string;
-  id_periodo: number;
-  color: string;
-}
-
-interface Horario {
-  id_horario: number;
-  dia_semana: string;
-  hora_inicio: string;
-  hora_fin: string;
-  id_materia: number;
-}
+// Fórmula para calcular contraste
+const obtenerColorTexto = (hexColor: string) => {
+  if (!hexColor) return '#1a182c';
+  const hex = hexColor.replace('#', '');
+  const r = parseInt(hex.length === 3 ? hex.slice(0, 1).repeat(2) : hex.substring(0, 2), 16);
+  const g = parseInt(hex.length === 3 ? hex.slice(1, 2).repeat(2) : hex.substring(2, 4), 16);
+  const b = parseInt(hex.length === 3 ? hex.slice(2, 3).repeat(2) : hex.substring(4, 6), 16);
+  const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+  return yiq >= 128 ? '#1a182c' : '#ffffff';
+};
 
 function Horarios() {
   const [periodos, setPeriodos] = useState<Periodo[]>([]);
   const [materias, setMaterias] = useState<Materia[]>([]);
   const [horarios, setHorarios] = useState<Horario[]>([]);
   const [cargando, setCargando] = useState(true);
-  
   const [idPeriodoSeleccionado, setIdPeriodoSeleccionado] = useState<number | ''>('');
 
   const [modalEditarAbierto, setModalEditarAbierto] = useState(false);
@@ -45,29 +37,21 @@ function Horarios() {
   const pixelesPorHora = 80;
 
   const diasDeLaSemana = [
-    { valor: 'Lun', etiqueta: 'Lunes' },
-    { valor: 'Mar', etiqueta: 'Martes' },
-    { valor: 'Mie', etiqueta: 'Miércoles' },
-    { valor: 'Jue', etiqueta: 'Jueves' },
-    { valor: 'Vie', etiqueta: 'Viernes' },
-    { valor: 'Sab', etiqueta: 'Sábado' },
+    { valor: 'Lun', etiqueta: 'Lunes' }, { valor: 'Mar', etiqueta: 'Martes' },
+    { valor: 'Mie', etiqueta: 'Miércoles' }, { valor: 'Jue', etiqueta: 'Jueves' },
+    { valor: 'Vie', etiqueta: 'Viernes' }, { valor: 'Sab', etiqueta: 'Sábado' },
     { valor: 'Dom', etiqueta: 'Domingo' }
   ];
 
   const cargarDatos = async () => {
     try {
       const [resPeriodos, resMaterias, resHorarios] = await Promise.all([
-        api.get('/periodos/'),
-        api.get('/materias/'),
-        api.get('/horarios/')
+        api.get('/periodos/'), api.get('/materias/'), api.get('/horarios/')
       ]);
       setPeriodos(resPeriodos.data);
       setMaterias(resMaterias.data);
       setHorarios(resHorarios.data);
-
-      if (resPeriodos.data.length > 0 && idPeriodoSeleccionado === '') {
-        setIdPeriodoSeleccionado(resPeriodos.data[0].id_periodo);
-      }
+      if (resPeriodos.data.length > 0 && idPeriodoSeleccionado === '') setIdPeriodoSeleccionado(resPeriodos.data[0].id_periodo);
     } catch (error) {
       console.error('Error al cargar datos:', error);
     } finally {
@@ -75,9 +59,7 @@ function Horarios() {
     }
   };
 
-  useEffect(() => {
-    cargarDatos();
-  }, []);
+  useEffect(() => { cargarDatos(); }, []);
 
   const materiasDelPeriodo = materias.filter(m => m.id_periodo === idPeriodoSeleccionado);
   const idsMateriasDelPeriodo = materiasDelPeriodo.map(m => m.id_materia);
@@ -89,20 +71,13 @@ function Horarios() {
 
   if (horariosDelPeriodo.length > 0) {
     const diasConClase = new Set(horariosDelPeriodo.map(h => h.dia_semana));
-    
     const tieneClasesEntreSemana = ['Lun', 'Mar', 'Mie', 'Jue', 'Vie'].some(d => diasConClase.has(d));
     const tieneClasesSabado = diasConClase.has('Sab');
     const tieneClasesDomingo = diasConClase.has('Dom');
 
-    if (tieneClasesEntreSemana) {
-      diasAMostrar.push(...diasDeLaSemana.filter(d => ['Lun', 'Mar', 'Mie', 'Jue', 'Vie'].includes(d.valor)));
-    }
-    if (tieneClasesSabado) {
-      diasAMostrar.push(diasDeLaSemana.find(d => d.valor === 'Sab')!);
-    }
-    if (tieneClasesDomingo) {
-      diasAMostrar.push(diasDeLaSemana.find(d => d.valor === 'Dom')!);
-    }
+    if (tieneClasesEntreSemana) diasAMostrar.push(...diasDeLaSemana.filter(d => ['Lun', 'Mar', 'Mie', 'Jue', 'Vie'].includes(d.valor)));
+    if (tieneClasesSabado) diasAMostrar.push(diasDeLaSemana.find(d => d.valor === 'Sab')!);
+    if (tieneClasesDomingo) diasAMostrar.push(diasDeLaSemana.find(d => d.valor === 'Dom')!);
 
     const horasInicio = horariosDelPeriodo.map(h => parseInt(h.hora_inicio.split(':')[0], 10));
     const horasFin = horariosDelPeriodo.map(h => {
@@ -114,16 +89,9 @@ function Horarios() {
     horaFinCalendario = Math.max(...horasFin);
     if (horaFinCalendario === horaInicioCalendario) horaFinCalendario += 1;
   }
+  if (diasAMostrar.length === 0) diasAMostrar = diasDeLaSemana.filter(d => ['Lun', 'Mar', 'Mie', 'Jue', 'Vie'].includes(d.valor));
 
-  if (diasAMostrar.length === 0) {
-    diasAMostrar = diasDeLaSemana.filter(d => ['Lun', 'Mar', 'Mie', 'Jue', 'Vie'].includes(d.valor));
-  }
-
-  const horasDelDia = Array.from(
-    { length: horaFinCalendario - horaInicioCalendario }, 
-    (_, i) => i + horaInicioCalendario
-  );
-
+  const horasDelDia = Array.from({ length: horaFinCalendario - horaInicioCalendario }, (_, i) => i + horaInicioCalendario);
   const alturaTotalCalendario = horasDelDia.length * pixelesPorHora;
 
   const formatHora = (h: number) => {
@@ -138,13 +106,8 @@ function Horarios() {
   };
 
   const calcularPosicionYAltura = (horaInicioStr: string, horaFinStr: string) => {
-    const minutosInicio = toMinutes(horaInicioStr);
-    const minutosFin = toMinutes(horaFinStr);
-    const minutosInicioCalendario = horaInicioCalendario * 60;
-
-    const top = ((minutosInicio - minutosInicioCalendario) / 60) * pixelesPorHora;
-    const height = ((minutosFin - minutosInicio) / 60) * pixelesPorHora;
-
+    const top = ((toMinutes(horaInicioStr) - (horaInicioCalendario * 60)) / 60) * pixelesPorHora;
+    const height = ((toMinutes(horaFinStr) - toMinutes(horaInicioStr)) / 60) * pixelesPorHora;
     return { top, height };
   };
 
@@ -162,50 +125,35 @@ function Horarios() {
     for (const clase of clases) {
       const inicio = toMinutes(clase.hora_inicio);
       const fin = toMinutes(clase.hora_fin);
-      
       let agregadoAlGrupo = false;
       for (const grupo of grupos) {
-        const chocaConGrupo = grupo.some(c => {
-          return Math.max(inicio, toMinutes(c.hora_inicio)) < Math.min(fin, toMinutes(c.hora_fin));
-        });
-        if (chocaConGrupo) {
+        if (grupo.some(c => Math.max(inicio, toMinutes(c.hora_inicio)) < Math.min(fin, toMinutes(c.hora_fin)))) {
           grupo.push(clase);
           agregadoAlGrupo = true;
           break;
         }
       }
-      if (!agregadoAlGrupo) {
-        grupos.push([clase]);
-      }
+      if (!agregadoAlGrupo) grupos.push([clase]);
     }
 
     for (const grupo of grupos) {
       grupo.forEach((clase, index) => {
-        superposiciones[clase.id_horario] = {
-          widthMultiplier: 1 / grupo.length,
-          offsetIndex: index
-        };
+        superposiciones[clase.id_horario] = { widthMultiplier: 1 / grupo.length, offsetIndex: index };
       });
     }
   }
 
   const abrirModalInfo = (horario: Horario, materia: Materia) => {
-    setHorarioSeleccionado(horario);
-    setMateriaSeleccionada(materia);
-    setModalInfoAbierto(true);
+    setHorarioSeleccionado(horario); setMateriaSeleccionada(materia); setModalInfoAbierto(true);
   };
 
   const cerrarModalInfo = () => {
-    setModalInfoAbierto(false);
-    setHorarioSeleccionado(null);
-    setMateriaSeleccionada(null);
+    setModalInfoAbierto(false); setHorarioSeleccionado(null); setMateriaSeleccionada(null);
   };
 
   const abrirModalEditar = (horario: Horario) => {
-    setHorarioEditando(horario);
-    setDiaSemana(horario.dia_semana);
-    setHoraInicio(horario.hora_inicio.substring(0, 5));
-    setHoraFin(horario.hora_fin.substring(0, 5));
+    setHorarioEditando(horario); setDiaSemana(horario.dia_semana);
+    setHoraInicio(horario.hora_inicio.substring(0, 5)); setHoraFin(horario.hora_fin.substring(0, 5));
     setModalEditarAbierto(true);
   };
 
@@ -216,41 +164,25 @@ function Horarios() {
     const nuevoInicio = toMinutes(horaInicio);
     const nuevoFin = toMinutes(horaFin);
     const choca = horariosDelPeriodo.some(h => {
-      if (h.id_horario === horarioEditando.id_horario) return false; 
-      if (h.dia_semana !== diaSemana) return false;
+      if (h.id_horario === horarioEditando.id_horario || h.dia_semana !== diaSemana) return false;
       return Math.max(nuevoInicio, toMinutes(h.hora_inicio)) < Math.min(nuevoFin, toMinutes(h.hora_fin));
     });
 
     if (choca) {
-      const confirmar = window.confirm('Aviso: Este horario choca con otra clase registrada el mismo día. ¿Deseas guardarlo de todos modos?');
-      if (!confirmar) return;
+      if (!window.confirm('Aviso: Este horario choca con otra clase registrada el mismo día. ¿Deseas guardarlo de todos modos?')) return;
     }
 
     try {
-      const datosHorario = {
-        id_materia: horarioEditando.id_materia,
-        dia_semana: diaSemana,
-        hora_inicio: horaInicio,
-        hora_fin: horaFin
-      };
-
-      await api.put(`/horarios/${horarioEditando.id_horario}`, datosHorario);
+      await api.put(`/horarios/${horarioEditando.id_horario}`, { id_materia: horarioEditando.id_materia, dia_semana: diaSemana, hora_inicio: horaInicio, hora_fin: horaFin });
       setModalEditarAbierto(false);
       cargarDatos();
-    } catch (error: any) {
-      alert(`Error: ${error.response?.data?.error || 'Error al guardar el horario'}`);
-    }
+    } catch (error: any) { alert(`Error: ${error.response?.data?.error || 'Error al guardar el horario'}`); }
   };
 
   const borrarHorario = async (id: number) => {
     if (!window.confirm('¿Deseas eliminar este horario?')) return;
-    try {
-      await api.delete(`/horarios/${id}`);
-      setModalEditarAbierto(false);
-      cargarDatos();
-    } catch (error) {
-      alert('Error al eliminar el horario.');
-    }
+    try { await api.delete(`/horarios/${id}`); setModalEditarAbierto(false); cargarDatos(); } 
+    catch (error) { alert('Error al eliminar el horario.'); }
   };
 
   return (
@@ -258,7 +190,7 @@ function Horarios() {
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-4 shrink-0">
         <h2 className="text-3xl font-medium text-texto-fuerte">Horario de clases</h2>
         
-        <div className="flex items-center gap-3 bg-fondo-lateral p-2 rounded-2xl shadow-sm">
+        <div className="flex items-center gap-3 bg-fondo-tarjeta p-2 rounded-2xl shadow-sm">
           <label htmlFor="selectorPeriodo" className="text-sm font-semibold text-texto-suave pl-3 whitespace-nowrap">
             Viendo periodo:
           </label>
@@ -267,12 +199,10 @@ function Horarios() {
             title="Seleccionar periodo a visualizar"
             value={idPeriodoSeleccionado}
             onChange={(e) => setIdPeriodoSeleccionado(Number(e.target.value))}
-            className="bg-white px-4 py-2 rounded-xl text-texto-fuerte font-bold shadow-sm outline-none cursor-pointer"
+            className="bg-fondo-principal px-4 py-2 rounded-xl text-texto-fuerte font-bold shadow-sm outline-none cursor-pointer"
           >
             {periodos.length === 0 && <option value="" disabled>No hay periodos</option>}
-            {periodos.map(p => (
-              <option key={p.id_periodo} value={p.id_periodo}>{p.nombre}</option>
-            ))}
+            {periodos.map(p => <option key={p.id_periodo} value={p.id_periodo}>{p.nombre}</option>)}
           </select>
         </div>
       </div>
@@ -280,22 +210,19 @@ function Horarios() {
       {cargando ? (
         <p className="text-texto-suave mt-10">Cargando tu horario...</p>
       ) : periodos.length === 0 ? (
-        <div className="bg-white p-12 rounded-4xl text-center shadow-md mt-10">
+        <div className="bg-fondo-tarjeta p-12 rounded-4xl text-center shadow-md mt-10 border border-transparent">
           <p className="text-texto-suave text-lg">Primero debes crear un periodo y materias para ver el horario.</p>
         </div>
       ) : (
-        <div className="bg-white rounded-4xl shadow-md overflow-hidden shrink-0">
+        <div className="bg-fondo-tarjeta rounded-4xl shadow-sm overflow-hidden shrink-0 border border-transparent">
           <div className="overflow-x-auto custom-scrollbar">
             <div style={{ minWidth: diasAMostrar.length > 3 ? '800px' : '100%' }}>
               
-              <div className="flex bg-fondo-lateral/90 backdrop-blur-md shadow-sm">
+              <div className="flex bg-fondo-lateral/90 backdrop-blur-md shadow-sm border-b border-black/5">
                 <div className="w-30 shrink-0 p-4 flex items-center justify-center">
                   <h3 className="font-bold text-texto-fuerte">Hora</h3>
                 </div>
-                <div 
-                  className="flex-1 grid"
-                  style={{ gridTemplateColumns: `repeat(${diasAMostrar.length}, minmax(100px, 1fr))` }}
-                >
+                <div className="flex-1 grid" style={{ gridTemplateColumns: `repeat(${diasAMostrar.length}, minmax(100px, 1fr))` }}>
                   {diasAMostrar.map((dia) => (
                     <div key={dia.valor} className="p-4 flex items-center justify-center">
                       <h3 className="font-bold text-texto-fuerte">{dia.etiqueta}</h3>
@@ -304,38 +231,24 @@ function Horarios() {
                 </div>
               </div>
 
-              <div className="flex bg-fondo-principal/20" style={{ height: `${alturaTotalCalendario}px` }}>
+              <div className="flex bg-fondo-principal/20 relative" style={{ height: `${alturaTotalCalendario}px` }}>
                 
-                <div className="w-30 shrink-0 bg-white border-r border-black/5 z-20 flex flex-col">
+                <div className="w-30 shrink-0 bg-fondo-tarjeta border-r border-black/5 z-20 flex flex-col">
                   {horasDelDia.map((hora) => (
-                    <div 
-                      key={hora} 
-                      className="flex flex-col items-center justify-center border-b border-black/5 last:border-b-0 w-full"
-                      style={{ height: `${pixelesPorHora}px` }}
-                    >
+                    <div key={hora} className="flex flex-col items-center justify-center border-b border-black/5 last:border-b-0 w-full" style={{ height: `${pixelesPorHora}px` }}>
                       <div className="text-[11px] sm:text-xs font-bold text-texto-suave flex flex-col items-center gap-0.5">
-                        <span>{formatHora(hora)}</span>
-                        <span>-</span>
-                        <span>{formatHora(hora + 1)}</span>
+                        <span>{formatHora(hora)}</span><span>-</span><span>{formatHora(hora + 1)}</span>
                       </div>
                     </div>
                   ))}
                 </div>
 
                 <div className="flex-1 relative">
-                  <div 
-                    className="absolute inset-0 grid pointer-events-none"
-                    style={{ gridTemplateColumns: `repeat(${diasAMostrar.length}, minmax(100px, 1fr))` }}
-                  >
-                    {diasAMostrar.map((_, idx) => (
-                      <div key={idx} className="border-r border-black/5 last:border-r-0"></div>
-                    ))}
+                  <div className="absolute inset-0 grid pointer-events-none" style={{ gridTemplateColumns: `repeat(${diasAMostrar.length}, minmax(100px, 1fr))` }}>
+                    {diasAMostrar.map((_, idx) => <div key={idx} className="border-r border-black/5 last:border-r-0"></div>)}
                   </div>
-
                   <div className="absolute inset-0 pointer-events-none">
-                    {horasDelDia.map((hora) => (
-                      <div key={hora} className="border-b border-black/5 last:border-b-0 w-full" style={{ height: `${pixelesPorHora}px` }}></div>
-                    ))}
+                    {horasDelDia.map((hora) => <div key={hora} className="border-b border-black/5 last:border-b-0 w-full" style={{ height: `${pixelesPorHora}px` }}></div>)}
                   </div>
 
                   {horariosDelPeriodo.map((horario) => {
@@ -347,9 +260,10 @@ function Horarios() {
                     if (diaIndex === -1) return null;
 
                     const infoSuperposicion = superposiciones[horario.id_horario] || { widthMultiplier: 1, offsetIndex: 0 };
-                    
                     const leftPos = `calc((100% / ${diasAMostrar.length}) * ${diaIndex} + ((100% / ${diasAMostrar.length}) * ${infoSuperposicion.widthMultiplier} * ${infoSuperposicion.offsetIndex}))`;
                     const widthPos = `calc((100% / ${diasAMostrar.length}) * ${infoSuperposicion.widthMultiplier})`;
+                    
+                    const colorTexto = obtenerColorTexto(materia.color || '#a0add3');
 
                     return (
                       <button
@@ -358,22 +272,15 @@ function Horarios() {
                         title={`Ver detalles de ${materia.nombre}`}
                         aria-label={`Ver detalles de ${materia.nombre}`}
                         className="absolute shadow-[0_4px_12px_rgba(0,0,0,0.08)] overflow-hidden flex items-center justify-center p-3 z-30"
-                        style={{
-                          top: `${top}px`,
-                          height: `${height}px`,
-                          left: leftPos, 
-                          width: widthPos, 
-                          backgroundColor: materia.color || '#a0add3',
-                        }}
+                        style={{ top: `${top}px`, height: `${height}px`, left: leftPos, width: widthPos, backgroundColor: materia.color || '#a0add3', color: colorTexto }}
                       >
-                        <span className="text-texto-fuerte text-xs sm:text-sm leading-tight text-center wrap-break-word">
+                        <span className="font-medium text-xs sm:text-sm leading-tight text-center wrap-break-word">
                           {materia.nombre}
                         </span>
                       </button>
                     );
                   })}
                 </div>
-
               </div>
             </div>
           </div>
@@ -381,59 +288,46 @@ function Horarios() {
       )}
 
       {/* ================= TARJETA DE INFORMACIÓN DE MATERIA ================= */}
-      {modalInfoAbierto && horarioSeleccionado && materiaSeleccionada && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/10 backdrop-blur-sm">
-          <div className="bg-white w-full max-w-sm rounded-4xl p-8 shadow-lg relative border border-black/5">
-            <button 
-              onClick={cerrarModalInfo} 
-              title="Cerrar ventana" 
-              aria-label="Cerrar ventana"
-              className="absolute top-6 right-6 text-texto-suave hover:bg-black/5 p-2 rounded-full transition-colors"
-            >
-              <X size={20} />
-            </button>
-            
-            <div className="mb-6 mt-2">
-              <span className="inline-block px-3 py-1 bg-fondo-lateral text-xs font-bold text-texto-fuerte uppercase tracking-wider rounded-lg mb-4 shadow-sm">
-                {periodos.find(p => p.id_periodo === materiaSeleccionada.id_periodo)?.nombre}
-              </span>
-              <h3 className="text-2xl font-bold text-texto-fuerte mb-2 leading-tight">
-                {materiaSeleccionada.nombre}
-              </h3>
-              <p className="text-texto-suave font-medium text-sm">
-                Profesor: {materiaSeleccionada.profesor || 'No asignado'}
-              </p>
-            </div>
+      {modalInfoAbierto && horarioSeleccionado && materiaSeleccionada && (() => {
+        const colorTexto = obtenerColorTexto(materiaSeleccionada.color || '#a0add3');
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <div className="bg-fondo-tarjeta w-full max-w-sm rounded-4xl p-8 shadow-lg relative border border-transparent">
+              <button onClick={cerrarModalInfo} title="Cerrar ventana" aria-label="Cerrar ventana" className="absolute top-6 right-6 text-texto-suave hover:bg-fondo-principal p-2 rounded-full transition-colors">
+                <X size={20} />
+              </button>
+              
+              <div className="mb-6 mt-2">
+                <span className="inline-block px-3 py-1 bg-fondo-lateral text-xs font-bold text-texto-fuerte uppercase tracking-wider rounded-lg mb-4 shadow-sm">
+                  {periodos.find(p => p.id_periodo === materiaSeleccionada.id_periodo)?.nombre}
+                </span>
+                <div className="p-4 rounded-2xl mb-4" style={{ backgroundColor: materiaSeleccionada.color || '#a0add3', color: colorTexto }}>
+                  <h3 className="text-2xl font-bold mb-2 leading-tight">{materiaSeleccionada.nombre}</h3>
+                  <p className="font-medium text-sm opacity-90">Profesor: {materiaSeleccionada.profesor || 'No asignado'}</p>
+                </div>
+              </div>
 
-            <div className="bg-fondo-principal p-4 rounded-2xl mb-6 border border-black/5">
-              <p className="text-xs font-bold text-texto-suave uppercase tracking-wider mb-2">Horario seleccionado</p>
-              <p className="text-texto-fuerte font-medium capitalize flex flex-col gap-1">
-                <span>{diasDeLaSemana.find(d => d.valor === horarioSeleccionado.dia_semana)?.etiqueta}</span>
-                <span className="text-sm opacity-80 normal-case">{horarioSeleccionado.hora_inicio.substring(0, 5)} - {horarioSeleccionado.hora_fin.substring(0, 5)}</span>
-              </p>
-            </div>
+              <div className="bg-fondo-principal p-4 rounded-2xl mb-6 border border-transparent">
+                <p className="text-xs font-bold text-texto-suave uppercase tracking-wider mb-2">Horario seleccionado</p>
+                <p className="text-texto-fuerte font-medium capitalize flex flex-col gap-1">
+                  <span>{diasDeLaSemana.find(d => d.valor === horarioSeleccionado.dia_semana)?.etiqueta}</span>
+                  <span className="text-sm opacity-80 normal-case">{horarioSeleccionado.hora_inicio.substring(0, 5)} - {horarioSeleccionado.hora_fin.substring(0, 5)}</span>
+                </p>
+              </div>
 
-            <button 
-              onClick={() => { cerrarModalInfo(); abrirModalEditar(horarioSeleccionado); }}
-              className="w-full flex items-center justify-center gap-2 py-3 bg-boton-activo text-texto-fuerte rounded-xl font-medium shadow-sm transition-colors"
-            >
-              <Edit2 size={16} />
-              Editar este horario
-            </button>
+              <button onClick={() => { cerrarModalInfo(); abrirModalEditar(horarioSeleccionado); }} className="w-full flex items-center justify-center gap-2 py-3 bg-boton-activo text-texto-fuerte rounded-xl font-medium shadow-sm transition-colors">
+                <Edit2 size={16} /> Editar este horario
+              </button>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ================= MODAL DE EDICIÓN DE HORARIO ================= */}
       {modalEditarAbierto && horarioEditando && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/10 backdrop-blur-sm">
-          <div className="bg-white w-full max-w-sm rounded-4xl p-10 shadow-[0_20px_50px_rgba(0,0,0,0.1)] relative border border-black/5">
-            <button 
-              onClick={() => setModalEditarAbierto(false)} 
-              title="Cerrar" 
-              aria-label="Cerrar modal" 
-              className="absolute top-8 right-8 text-texto-suave hover:bg-black/5 p-2 rounded-full transition-colors"
-            >
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-fondo-tarjeta w-full max-w-sm rounded-4xl p-10 shadow-[0_20px_50px_rgba(0,0,0,0.1)] relative border border-transparent">
+            <button onClick={() => setModalEditarAbierto(false)} title="Cerrar" aria-label="Cerrar modal" className="absolute top-8 right-8 text-texto-suave hover:bg-fondo-principal p-2 rounded-full transition-colors">
               <X size={20} />
             </button>
             
@@ -445,14 +339,7 @@ function Horarios() {
             <form onSubmit={guardarHorario} className="space-y-6">
               <div>
                 <label htmlFor="diaSemanaEdit" className="block text-sm font-medium mb-2 px-1 text-texto-suave">Día de la semana</label>
-                <select 
-                  id="diaSemanaEdit"
-                  title="Día de la semana"
-                  required 
-                  value={diaSemana} 
-                  onChange={(e) => setDiaSemana(e.target.value)} 
-                  className="w-full bg-fondo-principal p-4 rounded-2xl focus:ring-4 focus:ring-boton-hover/50 text-texto-fuerte font-semibold outline-none cursor-pointer"
-                >
+                <select id="diaSemanaEdit" title="Día de la semana" required value={diaSemana} onChange={(e) => setDiaSemana(e.target.value)} className="w-full bg-fondo-principal p-4 rounded-2xl focus:ring-4 focus:ring-boton-hover/50 text-texto-fuerte font-semibold outline-none cursor-pointer border border-transparent">
                   <option value="" disabled className="text-texto-suave/60 font-normal">-- Selecciona un día --</option>
                   {diasDeLaSemana.map(dia => <option key={dia.valor} value={dia.valor}>{dia.etiqueta}</option>)}
                 </select>
@@ -460,45 +347,24 @@ function Horarios() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label htmlFor="horaInicioEdit" className="block text-sm font-medium mb-2 px-1 text-texto-suave">Hora de inicio</label>
-                  <input 
-                    id="horaInicioEdit"
-                    title="Hora de inicio"
-                    required 
-                    type="time" 
-                    value={horaInicio} 
-                    onChange={(e) => setHoraInicio(e.target.value)} 
-                    className="w-full bg-fondo-principal p-4 rounded-2xl focus:ring-4 focus:ring-boton-hover/50 text-texto-fuerte font-semibold outline-none" 
-                  />
+                  <input id="horaInicioEdit" title="Hora de inicio" required type="time" value={horaInicio} onChange={(e) => setHoraInicio(e.target.value)} className="w-full bg-fondo-principal p-4 rounded-2xl focus:ring-4 focus:ring-boton-hover/50 text-texto-fuerte font-semibold outline-none border border-transparent" />
                 </div>
                 <div>
                   <label htmlFor="horaFinEdit" className="block text-sm font-medium mb-2 px-1 text-texto-suave">Hora de fin</label>
-                  <input 
-                    id="horaFinEdit"
-                    title="Hora de fin"
-                    required 
-                    type="time" 
-                    value={horaFin} 
-                    onChange={(e) => setHoraFin(e.target.value)} 
-                    className="w-full bg-fondo-principal p-4 rounded-2xl focus:ring-4 focus:ring-boton-hover/50 text-texto-fuerte font-semibold outline-none" 
-                  />
+                  <input id="horaFinEdit" title="Hora de fin" required type="time" value={horaFin} onChange={(e) => setHoraFin(e.target.value)} className="w-full bg-fondo-principal p-4 rounded-2xl focus:ring-4 focus:ring-boton-hover/50 text-texto-fuerte font-semibold outline-none border border-transparent" />
                 </div>
               </div>
               
               <div className="pt-4 flex flex-col gap-3">
                 <div className="flex gap-3">
-                  <button type="submit" className="flex-1 bg-texto-fuerte text-white py-4 rounded-2xl font-medium shadow-md transition-transform flex items-center justify-center gap-2">
+                  <button type="submit" className="flex-1 bg-texto-fuerte text-fondo-principal py-4 rounded-2xl font-medium shadow-md transition-transform flex items-center justify-center gap-2">
                     <Edit2 size={16} /> Guardar
                   </button>
-                  <button type="button" onClick={() => setModalEditarAbierto(false)} className="px-6 py-4 rounded-2xl font-medium text-texto-suave hover:bg-black/5 transition-colors">
+                  <button type="button" onClick={() => setModalEditarAbierto(false)} className="px-6 py-4 rounded-2xl font-medium text-texto-suave hover:bg-fondo-principal transition-colors">
                     Cancelar
                   </button>
                 </div>
-                
-                <button 
-                  type="button" 
-                  onClick={() => borrarHorario(horarioEditando.id_horario)} 
-                  className="w-full py-4 rounded-2xl font-medium text-red-500 hover:bg-red-50 transition-colors flex items-center justify-center gap-2"
-                >
+                <button type="button" onClick={() => borrarHorario(horarioEditando.id_horario)} className="w-full py-4 rounded-2xl font-medium text-red-500 hover:bg-red-500/10 transition-colors flex items-center justify-center gap-2">
                   <Trash2 size={16} /> Eliminar este bloque
                 </button>
               </div>

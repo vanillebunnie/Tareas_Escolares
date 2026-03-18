@@ -3,11 +3,21 @@ import { Link } from 'react-router-dom';
 import { Clock, CheckSquare, Plus, Calendar as CalendarIcon, X, ChevronLeft, ChevronRight, Circle, CheckCircle2, Edit2 } from 'lucide-react';
 import api from '../services/api';
 
-// Contratos de datos
 interface Periodo { id_periodo: number; nombre: string; }
 interface Materia { id_materia: number; nombre: string; profesor: string; color: string; id_periodo: number; }
 interface Tarea { id_tarea: number; titulo: string; descripcion: string; fecha_entrega: string; completada: boolean; id_materia: number; }
 interface Horario { id_horario: number; dia_semana: string; hora_inicio: string; hora_fin: string; id_materia: number; }
+
+// Fórmula para calcular contraste
+const obtenerColorTexto = (hexColor: string) => {
+  if (!hexColor) return '#1a182c';
+  const hex = hexColor.replace('#', '');
+  const r = parseInt(hex.length === 3 ? hex.slice(0, 1).repeat(2) : hex.substring(0, 2), 16);
+  const g = parseInt(hex.length === 3 ? hex.slice(1, 2).repeat(2) : hex.substring(2, 4), 16);
+  const b = parseInt(hex.length === 3 ? hex.slice(2, 3).repeat(2) : hex.substring(4, 6), 16);
+  const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+  return yiq >= 128 ? '#1a182c' : '#ffffff';
+};
 
 function Inicio() {
   const [nombreUsuario] = useState<string>(() => localStorage.getItem('nombreUsuario') || 'estudiante');
@@ -20,7 +30,6 @@ function Inicio() {
   const [tareaSeleccionada, setTareaSeleccionada] = useState<Tarea | null>(null);
   const [fechaSeleccionadaDia, setFechaSeleccionadaDia] = useState<Date | null>(null);
 
-  // Estados para el modal de edición integrado
   const [modalEditarAbierto, setModalEditarAbierto] = useState(false);
   const [idTareaEdicion, setIdTareaEdicion] = useState<number | null>(null);
   const [titulo, setTitulo] = useState('');
@@ -33,31 +42,20 @@ function Inicio() {
   const cargarDatos = async () => {
     try {
       const [resP, resM, resT, resH] = await Promise.all([
-        api.get('/periodos/'),
-        api.get('/materias/'),
-        api.get('/tareas/'),
-        api.get('/horarios/')
+        api.get('/periodos/'), api.get('/materias/'), api.get('/tareas/'), api.get('/horarios/')
       ]);
-      setPeriodos(resP.data);
-      setMaterias(resM.data);
-      setTareas(resT.data);
-      setHorarios(resH.data);
+      setPeriodos(resP.data); setMaterias(resM.data); setTareas(resT.data); setHorarios(resH.data);
       if (resP.data.length > 0 && idPeriodoSeleccionado === '') setIdPeriodoSeleccionado(resP.data[0].id_periodo);
-    } catch (error) {
-      console.error("Error cargando datos:", error);
-    }
+    } catch (error) { console.error("Error cargando datos:", error); }
   };
 
-  useEffect(() => {
-    cargarDatos();
-  }, [idPeriodoSeleccionado]);
+  useEffect(() => { cargarDatos(); }, [idPeriodoSeleccionado]);
 
   const materiasDelPeriodo = materias.filter(m => m.id_periodo === idPeriodoSeleccionado);
   const idsMaterias = materiasDelPeriodo.map(m => m.id_materia);
   const tareasDelPeriodo = tareas.filter(t => idsMaterias.includes(t.id_materia));
   const horariosDelPeriodo = horarios.filter(h => idsMaterias.includes(h.id_materia));
 
-  // TAREAS ORDENADAS
   const tareasOrdenadas = [...tareasDelPeriodo].sort((a, b) => {
     if (a.completada && !b.completada) return 1;
     if (!a.completada && b.completada) return -1;
@@ -67,37 +65,24 @@ function Inicio() {
   const toggleCompletada = async (tarea: Tarea, e: React.MouseEvent) => {
     e.stopPropagation();
     try {
-      await api.put(`/tareas/completar/${tarea.id_tarea}`);
+      await api.patch(`/tareas/${tarea.id_tarea}/completar`);
       cargarDatos();
       if (tareaSeleccionada) setTareaSeleccionada(null);
-    } catch (error) {
-      console.error(error);
-    }
+    } catch (error) { console.error(error); }
   };
 
-  // FUNCIONES DE EDICIÓN
   const abrirModalEditar = (tarea: Tarea) => {
-    setTitulo(tarea.titulo);
-    setDescripcion(tarea.descripcion);
-    setFechaEntrega(tarea.fecha_entrega.split('T')[0]);
-    setIdMateria(tarea.id_materia);
-    setIdTareaEdicion(tarea.id_tarea);
-    setTareaSeleccionada(null);
-    setModalEditarAbierto(true);
+    setTitulo(tarea.titulo); setDescripcion(tarea.descripcion); setFechaEntrega(tarea.fecha_entrega.split('T')[0]); setIdMateria(tarea.id_materia); setIdTareaEdicion(tarea.id_tarea); setTareaSeleccionada(null); setModalEditarAbierto(true);
   };
 
   const guardarEdicionTarea = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       await api.put(`/tareas/${idTareaEdicion}`, { titulo, descripcion, fecha_entrega: fechaEntrega, id_materia: Number(idMateria) });
-      setModalEditarAbierto(false);
-      cargarDatos();
-    } catch (error) {
-      alert('Error al guardar la tarea. Revisa los datos.');
-    }
+      setModalEditarAbierto(false); cargarDatos();
+    } catch (error) { alert('Error al guardar la tarea. Revisa los datos.'); }
   };
 
-  // CALENDARIO MENSUAL
   const mesCalendario = fechaCalendario.getMonth();
   const anioCalendario = fechaCalendario.getFullYear();
   const diasEnMes = new Date(anioCalendario, mesCalendario + 1, 0).getDate();
@@ -116,13 +101,8 @@ function Inicio() {
     return `${dia} de ${mes} del ${anio}`;
   };
 
-  // HORARIO COMPACTO
   const pixelesPorHora = 50;
-  const diasDeLaSemana = [
-    { valor: 'Lun', etiqueta: 'Lunes' }, { valor: 'Mar', etiqueta: 'Martes' },
-    { valor: 'Mie', etiqueta: 'Miércoles' }, { valor: 'Jue', etiqueta: 'Jueves' },
-    { valor: 'Vie', etiqueta: 'Viernes' }, { valor: 'Sab', etiqueta: 'Sábado' }
-  ];
+  const diasDeLaSemana = [{ valor: 'Lun', etiqueta: 'Lunes' }, { valor: 'Mar', etiqueta: 'Martes' }, { valor: 'Mie', etiqueta: 'Miércoles' }, { valor: 'Jue', etiqueta: 'Jueves' }, { valor: 'Vie', etiqueta: 'Viernes' }, { valor: 'Sab', etiqueta: 'Sábado' }];
 
   let diasAMostrar: typeof diasDeLaSemana = [];
   let horaInicioCalendario = 7;
@@ -169,12 +149,9 @@ function Inicio() {
   };
 
   const calcularPosicionYAltura = (horaInicioStr: string, horaFinStr: string) => {
-    const minutosInicio = toMinutes(horaInicioStr);
-    const minutosFin = toMinutes(horaFinStr);
-    const minutosInicioCalendario = horaInicioCalendario * 60;
     return { 
-      top: ((minutosInicio - minutosInicioCalendario) / 60) * pixelesPorHora, 
-      height: ((minutosFin - minutosInicio) / 60) * pixelesPorHora 
+      top: ((toMinutes(horaInicioStr) - (horaInicioCalendario * 60)) / 60) * pixelesPorHora, 
+      height: ((toMinutes(horaFinStr) - toMinutes(horaInicioStr)) / 60) * pixelesPorHora 
     };
   };
 
@@ -188,21 +165,17 @@ function Inicio() {
   for (const dia in clasesPorDia) {
     const clases = clasesPorDia[dia].sort((a, b) => toMinutes(a.hora_inicio) - toMinutes(b.hora_inicio));
     const grupos: Horario[][] = [];
-
     for (const clase of clases) {
       const inicio = toMinutes(clase.hora_inicio);
       const fin = toMinutes(clase.hora_fin);
       let agregadoAlGrupo = false;
       for (const grupo of grupos) {
         if (grupo.some(c => Math.max(inicio, toMinutes(c.hora_inicio)) < Math.min(fin, toMinutes(c.hora_fin)))) {
-          grupo.push(clase);
-          agregadoAlGrupo = true;
-          break;
+          grupo.push(clase); agregadoAlGrupo = true; break;
         }
       }
       if (!agregadoAlGrupo) grupos.push([clase]);
     }
-
     for (const grupo of grupos) {
       grupo.forEach((clase, index) => {
         superposiciones[clase.id_horario] = { widthMultiplier: 1 / grupo.length, offsetIndex: index };
@@ -218,14 +191,14 @@ function Inicio() {
           <p className="text-texto-suave text-lg">Resumen de tu periodo escolar</p>
         </div>
         
-        <div className="bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex items-center gap-3">
-          <label htmlFor="selector-periodo" className="text-sm text-gray-500">Periodo actual:</label>
+        <div className="bg-fondo-tarjeta p-3 rounded-xl shadow-sm flex items-center gap-3 border border-transparent">
+          <label htmlFor="selector-periodo" className="text-sm text-texto-suave">Periodo actual:</label>
           <select 
             id="selector-periodo" 
             title="Seleccionar periodo"
             value={idPeriodoSeleccionado} 
             onChange={(e) => setIdPeriodoSeleccionado(Number(e.target.value))}
-            className="bg-gray-50 px-3 py-1.5 rounded-lg text-gray-800 outline-none cursor-pointer"
+            className="bg-fondo-principal px-3 py-1.5 rounded-lg text-texto-fuerte outline-none cursor-pointer border border-transparent"
           >
             {periodos.map(p => <option key={p.id_periodo} value={p.id_periodo}>{p.nombre}</option>)}
           </select>
@@ -234,10 +207,9 @@ function Inicio() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* COLUMNA IZQUIERDA: TAREAS */}
-        <div className="lg:col-span-1 bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex flex-col h-125">
+        <div className="lg:col-span-1 bg-fondo-tarjeta rounded-2xl shadow-sm p-5 flex flex-col h-125 border border-transparent">
           <div className="flex justify-between items-center mb-4">
-            <Link to="/dashboard/tareas" className="text-xl font-medium text-gray-800 hover:underline flex items-center gap-2">
+            <Link to="/dashboard/tareas" className="text-xl font-medium text-texto-fuerte hover:underline flex items-center gap-2">
               <CheckSquare size={20} /> Lista de tareas
             </Link>
             <Link to="/dashboard/tareas" className="p-1.5 bg-fondo-lateral text-texto-fuerte rounded-md hover:opacity-80 transition-opacity" title="Agregar tarea" aria-label="Agregar tarea">
@@ -247,7 +219,7 @@ function Inicio() {
           
           <div className="flex-1 overflow-y-auto pr-2 space-y-3">
             {tareasOrdenadas.length === 0 ? (
-              <p className="text-gray-400 text-sm text-center mt-10">No hay tareas pendientes</p>
+              <p className="text-texto-suave opacity-60 text-sm text-center mt-10">No hay tareas pendientes</p>
             ) : (
               tareasOrdenadas.map(tarea => {
                 const materia = materias.find(m => m.id_materia === tarea.id_materia);
@@ -258,24 +230,24 @@ function Inicio() {
                   <div 
                     key={tarea.id_tarea} 
                     onClick={() => setTareaSeleccionada(tarea)}
-                    className={`p-3 rounded-lg border border-gray-100 cursor-pointer hover:bg-gray-50 transition-all flex items-start gap-3 ${tarea.completada ? 'opacity-50' : ''}`}
+                    className={`p-3 rounded-lg bg-fondo-principal shadow-sm cursor-pointer hover:brightness-95 transition-all flex items-start gap-3 border border-transparent ${tarea.completada ? 'opacity-50' : ''}`}
                   >
                     <button 
                       onClick={(e) => toggleCompletada(tarea, e)} 
-                      className="mt-0.5 shrink-0 text-gray-300 hover:text-green-500 transition-colors"
+                      className="mt-0.5 shrink-0 text-texto-suave hover:text-green-500 transition-colors"
                       title={tarea.completada ? "Desmarcar completada" : "Marcar como completada"}
                       aria-label={tarea.completada ? "Desmarcar completada" : "Marcar como completada"}
                     >
                       {tarea.completada ? <CheckCircle2 className="text-green-500" size={20} /> : <Circle size={20} />}
                     </button>
                     <div className="flex-1 min-w-0">
-                      <p className={`text-sm font-medium truncate ${tarea.completada ? 'line-through text-gray-500' : 'text-gray-800'}`}>{tarea.titulo}</p>
+                      <p className={`text-sm font-medium truncate ${tarea.completada ? 'line-through text-texto-suave' : 'text-texto-fuerte'}`}>{tarea.titulo}</p>
                       <div className="flex items-center gap-2 mt-1">
                         <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: materia?.color || '#ccc' }} />
-                        <p className="text-xs text-gray-500 truncate font-normal">{materia?.nombre}</p>
+                        <p className="text-xs text-texto-suave truncate font-normal">{materia?.nombre}</p>
                       </div>
                       {!tarea.completada && (
-                        <p className={`text-xs mt-1 ${estaVencida ? 'text-red-500' : 'text-gray-500'}`}>
+                        <p className={`text-xs mt-1 ${estaVencida ? 'text-red-500' : 'text-texto-suave'}`}>
                           Entrega: {fecha.toLocaleDateString()}
                         </p>
                       )}
@@ -287,12 +259,9 @@ function Inicio() {
           </div>
         </div>
 
-        {/* COLUMNA DERECHA: HORARIO Y CALENDARIO */}
         <div className="lg:col-span-2 flex flex-col gap-6">
-          
-          {/* Horario */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
-            <Link to="/dashboard/horarios" className="text-xl font-medium text-gray-800 hover:underline flex items-center gap-2 mb-4">
+          <div className="bg-fondo-tarjeta rounded-2xl shadow-sm p-5 border border-transparent">
+            <Link to="/dashboard/horarios" className="text-xl font-medium text-texto-fuerte hover:underline flex items-center gap-2 mb-4">
               <Clock size={20} /> Horario
             </Link>
             
@@ -311,11 +280,11 @@ function Inicio() {
                   </div>
                 </div>
 
-                <div className="flex bg-white relative" style={{ height: `${alturaTotalCalendario}px` }}>
+                <div className="flex bg-fondo-tarjeta relative" style={{ height: `${alturaTotalCalendario}px` }}>
                   <div className="w-27.5 shrink-0 border-r border-black/5 z-20 flex flex-col">
                     {horasDelDia.map((hora) => (
                       <div key={hora} className="flex flex-col items-center justify-center border-b border-black/5 last:border-b-0 w-full" style={{ height: `${pixelesPorHora}px` }}>
-                        <span className="text-[10px] sm:text-xs font-normal text-gray-500 not-italic text-center">{formatHoraRango(hora)}</span>
+                        <span className="text-[10px] sm:text-xs font-normal text-texto-suave not-italic text-center">{formatHoraRango(hora)}</span>
                       </div>
                     ))}
                   </div>
@@ -339,14 +308,15 @@ function Inicio() {
                       const infoSuperposicion = superposiciones[horario.id_horario] || { widthMultiplier: 1, offsetIndex: 0 };
                       const leftPos = `calc((100% / ${diasAMostrar.length}) * ${diaIndex} + ((100% / ${diasAMostrar.length}) * ${infoSuperposicion.widthMultiplier} * ${infoSuperposicion.offsetIndex}))`;
                       const widthPos = `calc((100% / ${diasAMostrar.length}) * ${infoSuperposicion.widthMultiplier})`;
+                      const colorTexto = obtenerColorTexto(materia.color || '#a0add3');
 
                       return (
                         <div
                           key={horario.id_horario}
                           className="absolute flex items-center justify-center p-1 z-30 overflow-hidden rounded-none text-gray-900"
-                          style={{ top: `${top}px`, height: `${height}px`, left: leftPos, width: widthPos, backgroundColor: materia.color || '#a0add3' }}
+                          style={{ top: `${top}px`, height: `${height}px`, left: leftPos, width: widthPos, backgroundColor: materia.color || '#a0add3', color: colorTexto }}
                         >
-                          <span className="text-[10px] leading-tight text-center wrap-break-word font-normal">{materia.nombre}</span>
+                          <span className="text-[10px] leading-tight text-center wrap-break-word font-medium">{materia.nombre}</span>
                         </div>
                       );
                     })}
@@ -356,25 +326,24 @@ function Inicio() {
             </div>
           </div>
 
-          {/* Calendario */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
-            <Link to="/dashboard/calendario" className="text-xl font-medium text-gray-800 hover:underline flex items-center gap-2 mb-4">
+          <div className="bg-fondo-tarjeta rounded-2xl shadow-sm p-5 border border-transparent">
+            <Link to="/dashboard/calendario" className="text-xl font-medium text-texto-fuerte hover:underline flex items-center gap-2 mb-4">
               <CalendarIcon size={20} /> Calendario
             </Link>
             
-            <div className="border border-gray-100 rounded-xl p-4">
+            <div className="bg-fondo-principal rounded-xl p-4 border border-transparent">
               <div className="flex justify-between items-center mb-4">
-                <button onClick={irAMesAnterior} className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors" title="Mes anterior" aria-label="Mes anterior">
+                <button onClick={irAMesAnterior} className="p-1.5 hover:bg-fondo-lateral/20 rounded-lg text-texto-suave transition-colors" title="Mes anterior" aria-label="Mes anterior">
                   <ChevronLeft size={20} />
                 </button>
-                <h4 className="font-medium text-gray-800">{nombresMeses[mesCalendario]} {anioCalendario}</h4>
-                <button onClick={irAMesSiguiente} className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors" title="Mes siguiente" aria-label="Mes siguiente">
+                <h4 className="font-medium text-texto-fuerte">{nombresMeses[mesCalendario]} {anioCalendario}</h4>
+                <button onClick={irAMesSiguiente} className="p-1.5 hover:bg-fondo-lateral/20 rounded-lg text-texto-suave transition-colors" title="Mes siguiente" aria-label="Mes siguiente">
                   <ChevronRight size={20} />
                 </button>
               </div>
 
               <div className="grid grid-cols-7 gap-1 text-center mb-2">
-                {diasSemanaCorto.map(dia => <div key={dia} className="text-xs font-semibold text-gray-500">{dia}</div>)}
+                {diasSemanaCorto.map(dia => <div key={dia} className="text-xs font-semibold text-texto-suave">{dia}</div>)}
               </div>
 
               <div className="grid grid-cols-7 gap-1">
@@ -391,9 +360,9 @@ function Inicio() {
                     <div 
                       key={dia} 
                       onClick={() => setFechaSeleccionadaDia(new Date(anioCalendario, mesCalendario, dia))}
-                      className="aspect-square border border-gray-50 flex flex-col items-center py-2 bg-gray-50/50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors"
+                      className="aspect-square flex flex-col items-center py-2 bg-fondo-tarjeta shadow-sm rounded-lg cursor-pointer hover:brightness-95 transition-colors"
                     >
-                      <span className="text-xs text-gray-700">{dia}</span>
+                      <span className="text-xs text-texto-fuerte">{dia}</span>
                       <div className="flex flex-wrap gap-1 justify-center px-1 mt-1">
                         {tareasDelDia.map(tarea => {
                           const materia = materias.find(m => m.id_materia === tarea.id_materia);
@@ -434,8 +403,8 @@ function Inicio() {
 
         return (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-xl w-full max-w-sm relative overflow-hidden shadow-xl">
-              <div className="bg-fondo-lateral p-5 pr-12 relative">
+            <div className="bg-fondo-tarjeta rounded-xl w-full max-w-sm relative overflow-hidden shadow-xl border border-transparent">
+              <div className="bg-fondo-lateral p-5 pr-12 relative border-b border-black/5">
                 <button 
                   onClick={() => setFechaSeleccionadaDia(null)} 
                   className="absolute top-5 right-4 text-texto-fuerte hover:opacity-70 transition-colors"
@@ -449,21 +418,21 @@ function Inicio() {
               
               <div className="p-5 max-h-80 overflow-y-auto">
                 {tareasDelDia.length === 0 ? (
-                  <p className="text-gray-400 text-sm text-center py-4">No hay tareas para este día.</p>
+                  <p className="text-texto-suave opacity-60 text-sm text-center py-4">No hay tareas para este día.</p>
                 ) : (
                   <div className="space-y-4">
                     {pendientesDia.length > 0 && (
                       <div>
-                        <h4 className="text-sm font-semibold text-gray-600 mb-2">Pendientes</h4>
+                        <h4 className="text-sm font-semibold text-texto-suave mb-2">Pendientes</h4>
                         <div className="space-y-2">
                           {pendientesDia.map(tarea => {
                             const materia = materias.find(m => m.id_materia === tarea.id_materia);
                             return (
-                              <div key={tarea.id_tarea} className="flex items-center gap-3 p-2 border border-gray-100 rounded-lg">
+                              <div key={tarea.id_tarea} className="flex items-center gap-3 p-2 bg-fondo-principal shadow-sm rounded-lg border border-transparent">
                                 <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: materia?.color || '#a0add3' }}></div>
                                 <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-medium text-gray-800 truncate">{tarea.titulo}</p>
-                                  <p className="text-xs text-gray-500 font-normal truncate">{materia?.nombre}</p>
+                                  <p className="text-sm font-medium text-texto-fuerte truncate">{tarea.titulo}</p>
+                                  <p className="text-xs text-texto-suave font-normal truncate">{materia?.nombre}</p>
                                 </div>
                               </div>
                             );
@@ -473,16 +442,16 @@ function Inicio() {
                     )}
                     {vencidasDia.length > 0 && (
                       <div>
-                        <h4 className="text-sm font-semibold text-red-600 mb-2">Vencidas</h4>
+                        <h4 className="text-sm font-semibold text-red-500 mb-2">Vencidas</h4>
                         <div className="space-y-2">
                           {vencidasDia.map(tarea => {
                             const materia = materias.find(m => m.id_materia === tarea.id_materia);
                             return (
-                              <div key={tarea.id_tarea} className="flex items-center gap-3 p-2 border border-red-100 bg-red-50/50 rounded-lg">
+                              <div key={tarea.id_tarea} className="flex items-center gap-3 p-2 bg-red-500/10 rounded-lg border border-transparent">
                                 <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: materia?.color || '#a0add3' }}></div>
                                 <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-medium text-red-800 truncate">{tarea.titulo}</p>
-                                  <p className="text-xs text-red-600 font-normal truncate">{materia?.nombre}</p>
+                                  <p className="text-sm font-medium text-red-500 truncate">{tarea.titulo}</p>
+                                  <p className="text-xs text-red-400 font-normal truncate">{materia?.nombre}</p>
                                 </div>
                               </div>
                             );
@@ -492,16 +461,16 @@ function Inicio() {
                     )}
                     {completadasDia.length > 0 && (
                       <div>
-                        <h4 className="text-sm font-semibold text-gray-400 mb-2">Completadas</h4>
+                        <h4 className="text-sm font-semibold text-texto-suave opacity-60 mb-2">Completadas</h4>
                         <div className="space-y-2">
                           {completadasDia.map(tarea => {
                             const materia = materias.find(m => m.id_materia === tarea.id_materia);
                             return (
-                              <div key={tarea.id_tarea} className="flex items-center gap-3 p-2 border border-gray-100 rounded-lg opacity-60">
+                              <div key={tarea.id_tarea} className="flex items-center gap-3 p-2 bg-fondo-principal shadow-sm rounded-lg opacity-60 border border-transparent">
                                 <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: materia?.color || '#a0add3' }}></div>
                                 <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-medium text-gray-500 line-through truncate">{tarea.titulo}</p>
-                                  <p className="text-xs text-gray-400 font-normal truncate">{materia?.nombre}</p>
+                                  <p className="text-sm font-medium text-texto-suave line-through truncate">{tarea.titulo}</p>
+                                  <p className="text-xs text-texto-suave opacity-70 font-normal truncate">{materia?.nombre}</p>
                                 </div>
                               </div>
                             );
@@ -521,16 +490,18 @@ function Inicio() {
       {tareaSeleccionada && (() => {
         const materiaTarea = materias.find(m => m.id_materia === tareaSeleccionada.id_materia);
         const estaVencida = new Date(tareaSeleccionada.fecha_entrega) < new Date(new Date().setHours(0,0,0,0)) && !tareaSeleccionada.completada;
+        const colorTexto = obtenerColorTexto(materiaTarea?.color || '#f3f4f6');
 
         return (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-xl w-full max-w-md relative overflow-hidden shadow-xl">
+            <div className="bg-fondo-tarjeta rounded-xl w-full max-w-md relative overflow-hidden shadow-xl border border-transparent">
               
-              <div className="p-5 pr-20 relative" style={{ backgroundColor: materiaTarea?.color || '#f3f4f6' }}>
+              <div className="p-5 pr-20 relative" style={{ backgroundColor: materiaTarea?.color || '#f3f4f6', color: colorTexto }}>
                 <div className="absolute top-5 right-4 flex items-center gap-3">
                   <button 
                     onClick={() => abrirModalEditar(tareaSeleccionada)} 
-                    className="text-black/50 hover:text-black transition-colors" 
+                    className="opacity-60 hover:opacity-100 transition-opacity" 
+                    style={{ color: colorTexto }}
                     title="Editar tarea"
                     aria-label="Editar tarea"
                   >
@@ -538,28 +509,29 @@ function Inicio() {
                   </button>
                   <button 
                     onClick={() => setTareaSeleccionada(null)} 
-                    className="text-black/50 hover:text-black transition-colors" 
+                    className="opacity-60 hover:opacity-100 transition-opacity" 
+                    style={{ color: colorTexto }}
                     title="Cerrar ventana"
                     aria-label="Cerrar ventana"
                   >
                     <X size={20} />
                   </button>
                 </div>
-                <h3 className="text-xl font-normal text-gray-900">{tareaSeleccionada.titulo}</h3>
-                <p className="text-sm text-gray-800 font-normal mt-1">{materiaTarea?.nombre}</p>
+                <h3 className="text-xl font-normal leading-tight" style={{ color: colorTexto }}>{tareaSeleccionada.titulo}</h3>
+                <p className="text-sm font-normal mt-1 opacity-90" style={{ color: colorTexto }}>{materiaTarea?.nombre}</p>
               </div>
               
               <div className="p-6">
                 <div className="space-y-4">
                   <div>
-                    <p className="text-sm font-medium text-gray-800">Descripción</p>
-                    <p className="text-sm text-gray-600 mt-1">{tareaSeleccionada.descripcion}</p>
+                    <p className="text-sm font-medium text-texto-fuerte">Descripción</p>
+                    <p className="text-sm text-texto-suave mt-1">{tareaSeleccionada.descripcion}</p>
                   </div>
-                  <p className="text-sm text-gray-600"><span className="font-medium text-gray-800">Fecha de entrega:</span> {formatearFechaLarga(new Date(tareaSeleccionada.fecha_entrega))}</p>
-                  <p className="text-sm text-gray-600"><span className="font-medium text-gray-800">Estado:</span> {tareaSeleccionada.completada ? ' Completada' : estaVencida ? <span className="text-red-600 font-medium"> Vencida</span> : ' Pendiente'}</p>
+                  <p className="text-sm text-texto-suave"><span className="font-medium text-texto-fuerte">Fecha de entrega:</span> {formatearFechaLarga(new Date(tareaSeleccionada.fecha_entrega))}</p>
+                  <p className="text-sm text-texto-suave"><span className="font-medium text-texto-fuerte">Estado:</span> {tareaSeleccionada.completada ? ' Completada' : estaVencida ? <span className="text-red-500 font-medium"> Vencida</span> : ' Pendiente'}</p>
                 </div>
-                <div className="mt-6 flex justify-end border-t border-gray-100 pt-4">
-                  <button onClick={(e) => { toggleCompletada(tareaSeleccionada, e); }} className="px-6 py-2 bg-texto-fuerte text-white hover:opacity-90 rounded-lg transition-all text-sm font-medium">
+                <div className="mt-6 flex justify-end border-t border-black/5 pt-4">
+                  <button onClick={(e) => { toggleCompletada(tareaSeleccionada, e); }} className="px-6 py-2 bg-texto-fuerte text-fondo-principal hover:opacity-90 rounded-lg transition-all text-sm font-medium shadow-sm">
                     {tareaSeleccionada.completada ? 'Completada' : 'Completar'}
                   </button>
                 </div>
@@ -569,74 +541,43 @@ function Inicio() {
         );
       })()}
 
-      {/* MODAL EDICIÓN DE TAREA (INICIO) */}
+      {/* MODAL EDICIÓN DE TAREA */}
       {modalEditarAbierto && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-xl relative">
+          <div className="bg-fondo-tarjeta w-full max-w-md rounded-2xl p-6 shadow-xl relative border border-transparent">
             <button 
               onClick={() => setModalEditarAbierto(false)} 
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-800 transition-colors"
+              className="absolute top-4 right-4 text-texto-suave hover:text-texto-fuerte transition-colors"
               title="Cerrar ventana"
               aria-label="Cerrar ventana"
             >
               <X size={20} />
             </button>
-            <h3 className="text-2xl font-normal text-gray-900 mb-6">Editar tarea</h3>
+            <h3 className="text-2xl font-normal text-texto-fuerte mb-6">Editar tarea</h3>
             
             <form onSubmit={guardarEdicionTarea} className="space-y-4">
               <div>
-                <label htmlFor="tituloTareaEdit" className="block text-sm text-gray-600 mb-1">Nombre de la tarea</label>
-                <input 
-                  id="tituloTareaEdit"
-                  required 
-                  type="text" 
-                  value={titulo} 
-                  onChange={(e) => setTitulo(e.target.value)} 
-                  placeholder="Escribe el nombre de la tarea"
-                  className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-texto-fuerte outline-none" 
-                />
+                <label htmlFor="tituloTareaEdit" className="block text-sm text-texto-suave mb-1">Nombre de la tarea</label>
+                <input id="tituloTareaEdit" required type="text" value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Escribe el nombre de la tarea" className="w-full bg-fondo-principal text-texto-fuerte p-3 rounded-lg focus:ring-2 focus:ring-boton-hover outline-none border border-transparent" />
               </div>
               <div>
-                <label htmlFor="materiaTareaEdit" className="block text-sm text-gray-600 mb-1">Materia</label>
-                <select 
-                  id="materiaTareaEdit"
-                  required 
-                  title="Seleccionar materia"
-                  value={idMateria} 
-                  onChange={(e) => setIdMateria(Number(e.target.value))} 
-                  className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-texto-fuerte outline-none cursor-pointer"
-                >
+                <label htmlFor="materiaTareaEdit" className="block text-sm text-texto-suave mb-1">Materia</label>
+                <select id="materiaTareaEdit" required title="Seleccionar materia" value={idMateria} onChange={(e) => setIdMateria(Number(e.target.value))} className="w-full bg-fondo-principal text-texto-fuerte p-3 rounded-lg focus:ring-2 focus:ring-boton-hover outline-none cursor-pointer border border-transparent">
                   <option value="" disabled>-- Selecciona una materia --</option>
                   {materiasDelPeriodo.map(m => <option key={m.id_materia} value={m.id_materia}>{m.nombre}</option>)}
                 </select>
               </div>
               <div>
-                <label htmlFor="fechaTareaEdit" className="block text-sm text-gray-600 mb-1">Fecha de entrega</label>
-                <input 
-                  id="fechaTareaEdit"
-                  required 
-                  type="date" 
-                  title="Seleccionar fecha de entrega"
-                  value={fechaEntrega} 
-                  onChange={(e) => setFechaEntrega(e.target.value)} 
-                  className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-texto-fuerte outline-none" 
-                />
+                <label htmlFor="fechaTareaEdit" className="block text-sm text-texto-suave mb-1">Fecha de entrega</label>
+                <input id="fechaTareaEdit" required type="date" title="Seleccionar fecha de entrega" value={fechaEntrega} onChange={(e) => setFechaEntrega(e.target.value)} className="w-full bg-fondo-principal text-texto-fuerte p-3 rounded-lg focus:ring-2 focus:ring-boton-hover outline-none border border-transparent" />
               </div>
               <div>
-                <label htmlFor="descTareaEdit" className="block text-sm text-gray-600 mb-1">Descripción</label>
-                <textarea 
-                  id="descTareaEdit"
-                  required 
-                  rows={3} 
-                  value={descripcion} 
-                  onChange={(e) => setDescripcion(e.target.value)} 
-                  placeholder="Escribe la descripción de la tarea..."
-                  className="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-texto-fuerte outline-none resize-none" 
-                />
+                <label htmlFor="descTareaEdit" className="block text-sm text-texto-suave mb-1">Descripción</label>
+                <textarea id="descTareaEdit" required rows={3} value={descripcion} onChange={(e) => setDescripcion(e.target.value)} placeholder="Escribe la descripción de la tarea..." className="w-full bg-fondo-principal text-texto-fuerte p-3 rounded-lg focus:ring-2 focus:ring-boton-hover outline-none resize-none border border-transparent" />
               </div>
               <div className="pt-4 flex gap-3">
-                <button type="button" onClick={() => setModalEditarAbierto(false)} className="flex-1 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">Cancelar</button>
-                <button type="submit" className="flex-1 py-3 bg-texto-fuerte text-white rounded-lg hover:opacity-90 transition-opacity">Guardar</button>
+                <button type="button" onClick={() => setModalEditarAbierto(false)} className="flex-1 py-3 bg-fondo-principal text-texto-suave rounded-lg hover:brightness-95 transition-colors shadow-sm">Cancelar</button>
+                <button type="submit" className="flex-1 py-3 bg-texto-fuerte text-fondo-principal rounded-lg hover:opacity-90 transition-opacity shadow-sm">Guardar</button>
               </div>
             </form>
           </div>

@@ -1,11 +1,12 @@
 import { Link, useNavigate, Outlet, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { Home, Bookmark, BookOpen, Clock, CheckSquare, Calendar, Settings, LogOut, Menu, User } from 'lucide-react';
+import { Home, Bookmark, Clock, CheckSquare, Calendar, Settings, LogOut, Menu, User, GraduationCap } from 'lucide-react';
 
 function Dashboard() {
   const navigate = useNavigate();
   const location = useLocation();
   const [nombreUsuario] = useState(() => localStorage.getItem('nombreUsuario') || 'Usuario');
+  const [correoUsuario] = useState(() => localStorage.getItem('correoUsuario') || '');
   const [sidebarAbierta, setSidebarAbierta] = useState<boolean>(true);
 
   useEffect(() => {
@@ -16,6 +17,7 @@ function Dashboard() {
   const cerrarSesion = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('nombreUsuario');
+    localStorage.removeItem('correoUsuario');
     navigate('/login');
   };
 
@@ -32,12 +34,17 @@ function Dashboard() {
       <aside className={`${sidebarAbierta ? 'w-64' : 'w-20'} bg-fondo-lateral shadow-[4px_0_24px_rgba(0,0,0,0.02)] flex flex-col transition-all duration-300 z-10`}>
         
         <div className="p-6 flex items-center justify-between">
-          {sidebarAbierta && <h1 className="text-xl font-bold tracking-wide text-texto-fuerte truncate">Tareas</h1>}
+          {sidebarAbierta && (
+            <div className="flex items-center gap-2 overflow-hidden">
+              <GraduationCap size={24} className="text-texto-fuerte shrink-0" />
+              <h1 className="text-xl font-bold tracking-wide text-texto-fuerte truncate">Ágora</h1>
+            </div>
+          )}
           <button 
             onClick={() => setSidebarAbierta(!sidebarAbierta)} 
             title="Alternar menú"
             aria-label="Alternar menú"
-            className="p-2.5 bg-boton-activo shadow-sm rounded-xl text-texto-suave hover:text-texto-fuerte"
+            className="p-2.5 bg-boton-activo shadow-sm rounded-xl text-texto-suave hover:text-texto-fuerte shrink-0 ml-auto"
           >
             <Menu size={18} />
           </button>
@@ -52,11 +59,16 @@ function Dashboard() {
         </nav>
 
         <div className="p-4 space-y-2 border-t border-boton-hover/50">
-          <Link to="/dashboard/cuenta" className={obtenerClaseBoton('/dashboard/cuenta')} title="Cuenta">
+          <Link to="/dashboard/cuenta" className={`flex items-center gap-3 py-3 text-sm rounded-xl transition-all text-texto-suave hover:bg-boton-hover hover:text-texto-fuerte ${sidebarAbierta ? 'px-4 justify-start' : 'px-0 justify-center'}`} title="Cuenta">
             <div className="w-10 h-10 rounded-full bg-boton-activo flex items-center justify-center overflow-hidden border border-boton-hover shrink-0 shadow-sm transition-transform hover:scale-105">
               <User size={20} className="text-texto-suave" />
             </div>
-            {sidebarAbierta && <span className="truncate">Cuenta</span>}
+            {sidebarAbierta && (
+              <div className="flex flex-col min-w-0 overflow-hidden">
+                <span className="truncate text-texto-fuerte font-bold leading-tight">{nombreUsuario}</span>
+                <span className="truncate text-xs text-texto-suave">{correoUsuario}</span>
+              </div>
+            )}
           </Link>
           <Link to="/dashboard/configuracion" className={obtenerClaseBoton('/dashboard/configuracion')} title="Ajustes"><Settings size={20} />{sidebarAbierta && <span>Ajustes</span>}</Link>
           <button onClick={cerrarSesion} className={`w-full flex items-center gap-3 py-3 text-sm font-medium rounded-xl text-texto-suave hover:bg-rojo-suave/20 hover:text-red-600 ${sidebarAbierta ? 'px-4 justify-start' : 'justify-center'}`} title="Cerrar sesión">
